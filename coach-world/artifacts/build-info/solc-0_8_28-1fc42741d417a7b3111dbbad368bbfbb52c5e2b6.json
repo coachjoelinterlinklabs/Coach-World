@@ -1,0 +1,43 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-1fc42741d417a7b3111dbbad368bbfbb52c5e2b6",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "userSourceNameMap": {
+    "contracts/CJC.sol": "project/contracts/CJC.sol",
+    "contracts/Counter.sol": "project/contracts/Counter.sol",
+    "contracts/Staking.sol": "project/contracts/Staking.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/CJC.sol": {
+        "content": "// SPDX-License-Identifier: MIT\r\npragma solidity ^0.8.20;\r\n\r\ncontract CJC {\r\n    string public name = \"Coach Joel Coin\";\r\n    string public symbol = \"CJC\";\r\n    uint8 public decimals = 18;\r\n\r\n    uint256 public totalSupply = 100_000_000_000 * 10**18;\r\n\r\n    mapping(address => uint256) public balanceOf;\r\n    mapping(address => mapping(address => uint256)) public allowance;\r\n\r\n    address public owner;\r\n    uint256 public burnRate = 1; // 1% burn per transfer\r\n\r\n    event Transfer(address indexed from, address indexed to, uint256 value);\r\n    event Burn(address indexed from, uint256 value);\r\n    event Approval(address indexed owner, address indexed spender, uint256 value);\r\n\r\n    constructor() {\r\n        owner = msg.sender;\r\n        balanceOf[msg.sender] = totalSupply;\r\n        emit Transfer(address(0), msg.sender, totalSupply);\r\n    }\r\n\r\n    modifier onlyOwner() {\r\n        require(msg.sender == owner, \"Not owner\");\r\n        _;\r\n    }\r\n\r\n    function approve(address spender, uint256 amount) public returns (bool) {\r\n        allowance[msg.sender][spender] = amount;\r\n        emit Approval(msg.sender, spender, amount);\r\n        return true;\r\n    }\r\n\r\n    function transfer(address to, uint256 amount) public returns (bool) {\r\n        return _transfer(msg.sender, to, amount);\r\n    }\r\n\r\n    function transferFrom(address from, address to, uint256 amount) public returns (bool) {\r\n        require(allowance[from][msg.sender] >= amount, \"Not allowed\");\r\n        allowance[from][msg.sender] -= amount;\r\n        return _transfer(from, to, amount);\r\n    }\r\n\r\n    function _transfer(address from, address to, uint256 amount) internal returns (bool) {\r\n        require(balanceOf[from] >= amount, \"Insufficient balance\");\r\n\r\n        uint256 burnAmount = (amount * burnRate) / 100;\r\n        uint256 sendAmount = amount - burnAmount;\r\n\r\n        balanceOf[from] -= amount;\r\n        balanceOf[to] += sendAmount;\r\n        totalSupply -= burnAmount;\r\n\r\n        emit Transfer(from, to, sendAmount);\r\n        emit Burn(from, burnAmount);\r\n\r\n        return true;\r\n    }\r\n}\r\n"
+      },
+      "project/contracts/Counter.sol": {
+        "content": "// SPDX-License-Identifier: UNLICENSED\npragma solidity ^0.8.28;\n\ncontract Counter {\n  uint public x;\n\n  event Increment(uint by);\n\n  function inc() public {\n    x++;\n    emit Increment(1);\n  }\n\n  function incBy(uint by) public {\n    require(by > 0, \"incBy: increment should be positive\");\n    x += by;\n    emit Increment(by);\n  }\n}\n"
+      },
+      "project/contracts/Staking.sol": {
+        "content": "// SPDX-License-Identifier: MIT\r\npragma solidity ^0.8.20;\r\n\r\ninterface IERC20 {\r\n    function transfer(address, uint256) external returns (bool);\r\n    function transferFrom(address, address, uint256) external returns (bool);\r\n}\r\n\r\ncontract Staking {\r\n    IERC20 public token;\r\n\r\n    struct StakeInfo {\r\n        uint256 amount;\r\n        uint256 lastClaim;\r\n    }\r\n\r\n    mapping(address => StakeInfo) public stakes;\r\n\r\n    uint256 public rewardRate = 1; // 1% per day\r\n\r\n    constructor(address tokenAddress) {\r\n        token = IERC20(tokenAddress);\r\n    }\r\n\r\n    // Stake tokens\r\n    function stake(uint256 amount) external {\r\n        require(amount > 0, \"Amount > 0\");\r\n\r\n        token.transferFrom(msg.sender, address(this), amount);\r\n\r\n        // auto-claim before updating stake\r\n        if (stakes[msg.sender].amount > 0) {\r\n            claim();\r\n        }\r\n\r\n        stakes[msg.sender].amount += amount;\r\n        stakes[msg.sender].lastClaim = block.timestamp;\r\n    }\r\n\r\n    // Claim rewards\r\n    function claim() public {\r\n        StakeInfo storage user = stakes[msg.sender];\r\n        require(user.amount > 0, \"Nothing staked\");\r\n\r\n        uint256 timePassed = block.timestamp - user.lastClaim;\r\n        uint256 reward = (user.amount * rewardRate * timePassed) / (100 * 1 days);\r\n\r\n        require(reward > 0, \"No rewards yet\");\r\n\r\n        user.lastClaim = block.timestamp;\r\n        token.transfer(msg.sender, reward);\r\n    }\r\n\r\n    // Withdraw stake + rewards\r\n    function unstake(uint256 amount) external {\r\n        StakeInfo storage user = stakes[msg.sender];\r\n        require(user.amount >= amount, \"Not enough staked\");\r\n\r\n        claim(); // auto-claim rewards\r\n\r\n        user.amount -= amount;\r\n        token.transfer(msg.sender, amount);\r\n    }\r\n\r\n    // Check pending rewards\r\n    function pendingRewards(address user) external view returns (uint256) {\r\n        StakeInfo storage info = stakes[user];\r\n        if (info.amount == 0) return 0;\r\n\r\n        uint256 timePassed = block.timestamp - info.lastClaim;\r\n        return (info.amount * rewardRate * timePassed) / (100 * 1 days);\r\n    }\r\n}\r\n"
+      }
+    }
+  }
+}
