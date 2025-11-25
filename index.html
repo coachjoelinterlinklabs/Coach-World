@@ -206,7 +206,7 @@ async function claimSingle(){
 }
 
 async function claimAll(){
-  if(!signer) return alert('Connect wallet first');
+  if(!signer) return alert('Connect Web3/ITLX Wallet first');
   const times = Math.floor(pendingReward / 21);
   if(times<=0) return alert('No pending rewards');
   const contract = new ethers.Contract(CLAIM_CONTRACT_ADDRESS, CLAIM_CONTRACT_ABI, signer);
