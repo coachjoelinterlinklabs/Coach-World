@@ -4,6 +4,10 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <title>CJ Game DApp — Coach Joel House</title>
+
+<!-- Load ethers correctly BEFORE game code -->
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+
 <style>
   :root{--bg:#071324;--card:#0f1b26;--accent:#00c48c;--muted:#9aa4b2}
   *{box-sizing:border-box}
@@ -27,15 +31,13 @@
   @media(min-width:720px){ .grid{grid-template-columns:1fr 320px} }
 </style>
 </head>
+
 <body>
   <div class="wrap">
     <header>
       <div>
         <h1>CJ Game — Coach Joel House</h1>
         <div class="small">Mobile-friendly DApp — play, beat levels, claim 21 CJ per level.</div>
-      </div>
-      <div class="row">
-        <div class="small">Token: <strong>$CJ</strong></div>
       </div>
     </header>
 
@@ -64,199 +66,220 @@
             <button id="pauseBtn">Pause</button>
           </div>
 
-          <div class="controls" aria-hidden="false">
+          <div class="controls">
             <button class="touch-btn" id="leftBtn">◀</button>
             <button class="touch-btn" id="jumpBtn">▲</button>
             <button class="touch-btn" id="rightBtn">▶</button>
           </div>
 
-          <img src="/mnt/data/2f0dee77-3407-4a0a-90af-b0394d226cfc.png" class="screenshot" alt="screenshot" />
-
-          <h3 style="margin-top:12px">How it works (transfer rewards)</h3>
+          <h3 style="margin-top:12px">Transfer Rewards System</h3>
           <ol class="small">
-            <li>Connect wallet ITLX Wallet.</li>
-            <li>Complete a level — each level gives <strong>21 CJ</strong> pending in the UI.</li>
-            <li>Press <strong>Claim Reward</strong> to call the reward contract's <code>claim()</code>. Each call withdraws one 21 CJ reward from the contract.</li>
-            <li>If you have multiple pending levels, use <strong>Claim All</strong> (will prompt a ITLX Wallet confirmation per claim).</li>
+            <li>Connect with ITLX Wallet or MetaMask.</li>
+            <li>Each completed level gives **21 CJ pending**.</li>
+            <li>Claim Reward → calls your reward contract <code>claim()</code>.</li>
+            <li>Claim All → multiple claim calls (separate gas).</li>
           </ol>
-
-          <div class="small">Note: Gas is paid in BNB per claim transaction. Make sure the reward contract is pre-funded with enough $CJ.</div>
-
         </section>
       </main>
-
-      <aside style="display:none;"> <!-- sidebar hidden on mobile default -->
-        <div class="card">
-          <h4>Contract Info</h4>
-          <div class="small">CJ Contract: <a class="muted" href="https://bscscan.com/token/0x9ECEfef5d5B5b0aCF2467393e7b5A6c7c501c6F6" target="_blank">0x9ECE...c6F6</a></div>
-          <div class="small" style="margin-top:6px">Claim Contract: <code id="claimAddr">0x2fAac87db2C3389674F8bF72E557e1C22134De49</code></div>
-          <div style="margin-top:8px"><a class="muted" href="/mnt/data/CJ_Token_Private_Whitepaper.pdf" target="_blank">Download whitepaper (private)</a></div>
-        </div>
-      </aside>
     </div>
 
     <footer>
-      <div class="small">This file is ready to host on GitHub Pages. For best mobile experience open it in the ITLX DApp browser or any web3-enabled mobile wallet.</div>
+      <div class="small">Optimized for ITLX Wallet DApp browser.</div>
     </footer>
   </div>
 
 <script>
-// ==================== CONFIG ====================
-const CJ_TOKEN_ADDRESS = '0x9ECEfef5d5B5b0aCF2467393e7b5A6c7c501c6F6';
-const CLAIM_CONTRACT_ADDRESS = '0x2fAac87db2C3389674F8bF72E557e1C22134De49';
-const ERC20_ABI = [
-  {"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"type":"function"},
-  {"constant":true,"inputs":[],"name":"decimals","outputs":[{"name":"","type":"uint8"}],"type":"function"}
-];
-const CLAIM_CONTRACT_ABI = [ { "inputs": [], "name": "claim", "outputs": [], "stateMutability": "nonpayable", "type": "function" } ];
-// =================================================
+// ============ CONFIG ============
+const CJ_TOKEN_ADDRESS = "0x9ECEfef5d5B5b0aCF2467393e7b5A6c7c501c6F6";
+const CLAIM_CONTRACT_ADDRESS = "0x2fAac87db2C3389674F8bF72E557e1C22134De49";
 
+const ERC20_ABI = [
+  { "constant":true, "inputs":[{"name":"_owner","type":"address"}], "name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"type":"function"},
+  { "constant":true, "inputs":[], "name":"decimals","outputs":[{"name":"","type":"uint8"}],"type":"function"}
+];
+
+const CLAIM_CONTRACT_ABI = [
+  { "inputs": [], "name": "claim", "outputs": [], "stateMutability": "nonpayable", "type": "function" }
+];
+
+// ============ WALLET CONNECT ============
 let provider, signer, account;
+
 async function connectWallet(){
-  if(window.ethereum){
-    provider = new ethers.providers.Web3Provider(window.ethereum);
-    await provider.send('eth_requestAccounts',[]);
-    signer = provider.getSigner();
-    account = await signer.getAddress();
-    document.getElementById('account').innerText = account;
-    loadBalance();
-  } else {
-    alert('No Web3 wallet detected. Use ITLX wallet to claim');
+  try {
+    if (window.ethereum) {
+      provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+      await provider.send("eth_requestAccounts", []);
+      signer = provider.getSigner();
+      account = await signer.getAddress();
+      document.getElementById("account").innerText = account;
+      loadBalance();
+    } else {
+      alert("No Web3 wallet found. Please open in ITLX Wallet.");
+    }
+  } catch(e) {
+    console.error(e);
+    alert("Connection failed.");
   }
 }
+
 async function loadBalance(){
   try{
     const token = new ethers.Contract(CJ_TOKEN_ADDRESS, ERC20_ABI, provider);
     const decimals = await token.decimals();
     const raw = await token.balanceOf(account);
-    const balance = Number(ethers.utils.formatUnits(raw, decimals));
-    document.getElementById('cjBalance').innerText = 'CJ Balance: ' + balance;
-  }catch(e){ console.error(e); }
+    document.getElementById("cjBalance").innerText = "CJ Balance: " + ethers.utils.formatUnits(raw, decimals);
+  } catch(e){ console.error(e); }
 }
 
-// Claim helpers
+document.getElementById("connectBtn").addEventListener("click", connectWallet);
+
+// ============ CLAIM SYSTEM ============
+let pendingReward = 0;
+
+function updateClaimButtons(){
+  document.getElementById("claimBtn").innerText = `Claim Reward (${pendingReward} CJ)`;
+  document.getElementById("claimBtn").disabled = pendingReward < 21;
+
+  const multi = Math.floor(pendingReward / 21);
+  document.getElementById("claimAllBtn").innerText = `Claim All (${multi})`;
+  document.getElementById("claimAllBtn").disabled = multi <= 0;
+}
+
 async function claimSingle(){
-  if(!signer) return alert('Connect wallet first');
+  if(!signer) return alert("Connect wallet first.");
+
   const contract = new ethers.Contract(CLAIM_CONTRACT_ADDRESS, CLAIM_CONTRACT_ABI, signer);
+
   try{
     const tx = await contract.claim();
     await tx.wait();
-    alert('Claim successful — check your wallet');
-    await loadBalance();
-    // reduce pending by one reward
-    pendingReward = Math.max(0, pendingReward - 21);
+    alert("21 CJ claimed!");
+
+    pendingReward -= 21;
+    if (pendingReward < 0) pendingReward = 0;
     updateClaimButtons();
-  }catch(e){ console.error(e); alert('Claim failed: ' + (e.reason||e.message||e)); }
+    loadBalance();
+
+  }catch(e){ alert("Claim failed."); console.error(e); }
 }
 
 async function claimAll(){
-  if(!signer) return alert('Connect wallet first');
+  if(!signer) return alert("Connect wallet first.");
+
   const times = Math.floor(pendingReward / 21);
-  if(times <= 0) return alert('No pending rewards');
+  if(times <= 0) return;
+
   const contract = new ethers.Contract(CLAIM_CONTRACT_ADDRESS, CLAIM_CONTRACT_ABI, signer);
-  try{
-    for(let i=0;i<times;i++){
-      const tx = await contract.claim();
-      await tx.wait();
-      // update UI between txs
-      pendingReward = Math.max(0, pendingReward - 21);
-      updateClaimButtons();
-      await new Promise(r=>setTimeout(r,500));
-    }
-    alert('All claims completed');
-    loadBalance();
-  }catch(e){ console.error(e); alert('Claim failed during batch: ' + (e.reason||e.message||e)); }
+
+  for(let i=0;i<times;i++){
+    const tx = await contract.claim();
+    await tx.wait();
+    pendingReward -= 21;
+    updateClaimButtons();
+  }
+
+  alert("All rewards claimed!");
+  loadBalance();
 }
 
-document.getElementById('connectBtn').addEventListener('click', connectWallet);
-document.getElementById('claimBtn').addEventListener('click', claimSingle);
-document.getElementById('claimAllBtn').addEventListener('click', claimAll);
+document.getElementById("claimBtn").addEventListener("click", claimSingle);
+document.getElementById("claimAllBtn").addEventListener("click", claimAll);
 
-// ==================== Simple Mobile Game Engine ====================
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-function resizeCanvas(){ const ratio = Math.min(window.devicePixelRatio || 1, 2); const w = Math.min(window.innerWidth - 24, 900); canvas.width = w; canvas.height = Math.floor(w * 0.45); }
-window.addEventListener('resize', resizeCanvas); resizeCanvas();
+// ============ SIMPLE GAME ENGINE ============
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
 
-let running=false; let level=1; let score=0; let lives=3; let pendingReward=0;
-const player = {x:60,y:0,w:28,h:28,vy:0}; player.ground = () => canvas.height - 40;
-let obstacles=[]; let enemies=[]; let goalX = () => canvas.width - 40;
+function resizeCanvas(){
+  const w = Math.min(window.innerWidth - 24, 900);
+  canvas.width = w;
+  canvas.height = Math.floor(w * 0.45);
+}
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
+
+let running=false, level=1, score=0, lives=3;
+const player={x:60,y:0,w:28,h:28,vy:0};
+player.ground=()=>canvas.height-40;
+
+let obstacles=[], enemies=[];
+const goalX=()=>canvas.width-40;
 
 function resetLevel(){ obstacles=[]; enemies=[]; player.x=60; player.y=player.ground(); player.vy=0; }
+
 function spawnObstacles(){
-  for(let i=0;i<level+2;i++){ const ox=canvas.width*0.5 + i*(80 + Math.random()*60); obstacles.push({x:ox,y:player.ground(),w:30,h:30}); }
-  for(let i=0;i<Math.min(5,level);i++){ const ex=canvas.width*0.55 + i*(120 + Math.random()*80); enemies.push({x:ex,y:player.ground()-10,w:24,h:24}); }
+  for(let i=0;i<level+2;i++){
+    const ox=canvas.width*0.5 + i*(80 + Math.random()*60);
+    obstacles.push({x:ox,y:player.ground(),w:30,h:30});
+  }
 }
 
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  // background
-  ctx.fillStyle='#081a22'; ctx.fillRect(0,0,canvas.width,canvas.height);
-  // ground
-  ctx.fillStyle='#052025'; ctx.fillRect(0,canvas.height-40,canvas.width,40);
-  // player
-  ctx.fillStyle='#00c48c'; ctx.fillRect(player.x,player.y-player.h,player.w,player.h);
-  ctx.fillStyle='#fff'; ctx.fillText('🏃',player.x+4,player.y-player.h/2+6);
-  // obstacles
-  ctx.fillStyle='#d95555'; obstacles.forEach(o=>{ ctx.fillRect(o.x,o.y-o.h,o.w,o.h); ctx.fillText('🧱',o.x+6,o.y-o.h/2+6); });
-  // enemies
-  ctx.fillStyle='#ffb86b'; enemies.forEach(e=>{ ctx.fillRect(e.x,e.y-e.h,e.w,e.h); ctx.fillText('🤖',e.x+4,e.y-e.h/2+6); });
-  // goal
-  ctx.fillStyle='#fff'; ctx.fillText('🏁',goalX(),player.ground()-20);
+  ctx.fillStyle="#081a22"; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle="#052025"; ctx.fillRect(0,canvas.height-40,canvas.width,40);
+
+  ctx.fillStyle="#00c48c"; ctx.fillRect(player.x,player.y-player.h,player.w,player.h);
+
+  ctx.fillStyle="#fff"; ctx.fillText("🏃",player.x+4,player.y-player.h/2+6);
+  ctx.fillStyle="#d95555"; obstacles.forEach(o=>{ ctx.fillRect(o.x,o.y-o.h,o.w,o.h); });
+
+  ctx.fillStyle="#fff"; ctx.fillText("🏁",goalX(),player.ground()-20);
 }
 
 function updatePhysics(dt){
-  player.vy += 0.9; player.y += player.vy; if(player.y>player.ground()) {player.y=player.ground(); player.vy=0}
+  player.vy += 0.9;
+  player.y += player.vy;
+  if(player.y > player.ground()){ player.y = player.ground(); player.vy = 0; }
+
   obstacles.forEach(o=>o.x -= 2 + level*0.2);
-  enemies.forEach(e=>e.x -= 2 + level*0.25);
 }
 
-function checkCollisions(){
-  for(let o of obstacles){ if(player.x+player.w > o.x && player.x < o.x+o.w && player.y-player.h < o.y && player.y > o.y-o.h){
-      lives--; document.getElementById('lives').innerText=lives; resetLevel(); if(lives<=0){ running=false; alert('Game over'); }
+function check(){
+  for(let o of obstacles){
+    if(player.x+player.w > o.x && player.x < o.x+o.w && player.y-player.h < o.y && player.y > o.y-o.h){
+      lives--; document.getElementById("lives").innerText=lives; resetLevel();
+      if(lives<=0){ running=false; alert("Game Over!"); }
       return;
-    }}
-  for(let i=enemies.length-1;i>=0;i--){ const e=enemies[i]; if(player.x+player.w > e.x && player.x < e.x+e.w && player.y-player.h < e.y && player.y > e.y-e.h){
-      enemies.splice(i,1); score += 10; document.getElementById('score').innerText = score;
-    }}
+    }
+  }
+
   if(player.x > goalX()-10){
-    level++; document.getElementById('level').innerText = level;
-    // reward 21 CJ per completed level
+    level++; document.getElementById("level").innerText=level;
+
+    // reward player 21 CJ
     pendingReward += 21;
     updateClaimButtons();
+
     resetLevel(); spawnObstacles();
   }
 }
 
-let lastTime=0; function loop(ts){ if(!running) return; const dt = ts-lastTime; lastTime=ts; updatePhysics(dt); draw(); checkCollisions(); requestAnimationFrame(loop); }
-
-// Controls
-window.addEventListener('keydown', e=>{ if(e.code==='ArrowUp'||e.code==='Space'){ if(player.y==player.ground()) player.vy = -12; } if(e.code==='ArrowRight'){ player.x += 8; } if(e.code==='ArrowLeft'){ player.x -= 8; } });
-
-// Touch buttons
-document.getElementById('leftBtn').addEventListener('touchstart', ()=>{ player.x -= 8; });
-document.getElementById('rightBtn').addEventListener('touchstart', ()=>{ player.x += 8; });
-document.getElementById('jumpBtn').addEventListener('touchstart', ()=>{ if(player.y==player.ground()) player.vy = -12; });
-
-// Start/pause
-document.getElementById('startBtn').addEventListener('click', ()=>{ if(!running){ running=true; level=1; score=0; lives=3; pendingReward=0; document.getElementById('level').innerText=level; document.getElementById('score').innerText=score; document.getElementById('lives').innerText=lives; resetLevel(); spawnObstacles(); lastTime = performance.now(); requestAnimationFrame(loop); }});
-document.getElementById('pauseBtn').addEventListener('click', ()=>{ running = !running; if(running){ lastTime = performance.now(); requestAnimationFrame(loop); } });
-
-function updateClaimButtons(){
-  document.getElementById('claimBtn').innerText = 'Claim Reward ('+ pendingReward + ' CJ)';
-  document.getElementById('claimBtn').disabled = pendingReward < 21;
-  document.getElementById('claimAllBtn').innerText = 'Claim All ('+ Math.floor(pendingReward/21) +')';
-  document.getElementById('claimAllBtn').disabled = Math.floor(pendingReward/21) <= 0;
+let lastT=0;
+function loop(t){
+  if(!running) return;
+  updatePhysics(t-lastT); draw(); check();
+  lastT=t; requestAnimationFrame(loop);
 }
 
-// Claim handlers already attached above
-
-// Load ethers
-<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-<script>
-window.addEventListener('load', () => {
-  console.log("Ethers loaded. Ready.");
+document.getElementById("startBtn").addEventListener("click", ()=>{
+  if(!running){ running=true; level=1; score=0; lives=3; pendingReward=0;
+    document.getElementById("lives").innerText=lives;
+    updateClaimButtons();
+    resetLevel(); spawnObstacles();
+    lastT=performance.now(); requestAnimationFrame(loop);
+  }
 });
+
+document.getElementById("pauseBtn").addEventListener("click", ()=>{
+  running = !running;
+  if(running){ lastT = performance.now(); requestAnimationFrame(loop); }
+});
+
+document.getElementById("leftBtn").addEventListener("touchstart", ()=>{ player.x -= 10; });
+document.getElementById("rightBtn").addEventListener("touchstart", ()=>{ player.x += 10; });
+document.getElementById("jumpBtn").addEventListener("touchstart", ()=>{ if(player.y==player.ground()) player.vy = -14; });
+
 </script>
 </body>
 </html>
