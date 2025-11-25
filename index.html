@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CJ Claim Game</title>
+  <style>
+    body {
+      background: #0a0a0a;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+    #gameCanvas {
+      background: #111;
+      border: 2px solid #fff;
+      display: block;
+      margin: 20px auto;
+    }
+    .btn {
+      background: #1e90ff;
+      color: #fff;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 10px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <h1>CJ Token Level Game</h1>
+  <p>Reach the goal to clear a level and earn <b>$CJ</b> rewards!</p>
+
+  <canvas id="gameCanvas" width="350" height="500"></canvas>
+
+  <h2>Level: <span id="level">1</span></h2>
+  <h2>Earned CJ: <span id="cj">0</span></h2>
+
+  <button class="btn" onclick="startGame()">Start Game</button>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    let player = { x: 150, y: 450, size: 20, speed: 5 };
+    let goal = { x: 150, y: 30, size: 20 };
+
+    let level = 1;
+    let earnedCJ = 0;
+    let playing = false;
+
+    function drawPlayer() {
+      ctx.fillStyle = "#1e90ff";
+      ctx.fillRect(player.x, player.y, player.size, player.size);
+    }
+
+    function drawGoal() {
+      ctx.fillStyle = "#00ff00";
+      ctx.fillRect(goal.x, goal.y, goal.size, goal.size);
+    }
+
+    function clear() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (!playing) return;
+
+      if (e.key === "ArrowLeft" && player.x > 0) player.x -= player.speed;
+      if (e.key === "ArrowRight" && player.x < canvas.width - player.size)
+        player.x += player.speed;
+      if (e.key === "ArrowUp" && player.y > 0) player.y -= player.speed;
+      if (e.key === "ArrowDown" && player.y < canvas.height - player.size)
+        player.y += player.speed;
+    });
+
+    function detectWin() {
+      if (
+        player.x < goal.x + goal.size &&
+        player.x + player.size > goal.x &&
+        player.y < goal.y + goal.size &&
+        player.y + player.size > goal.y
+      ) {
+        // Reward system
+        earnedCJ += level * 5; 
+        level++;
+        document.getElementById("level").innerText = level;
+        document.getElementById("cj").innerText = earnedCJ;
+
+        // Reset player
+        player.x = 150;
+        player.y = 450;
+
+        // Randomize goal position
+        goal.x = Math.random() * (canvas.width - goal.size);
+
+        alert("Level Cleared! +" + level * 5 + " CJ");
+      }
+    }
+
+    function gameLoop() {
+      if (!playing) return;
+
+      clear();
+      drawGoal();
+      drawPlayer();
+      detectWin();
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    function startGame() {
+      playing = true;
+      gameLoop();
+    }
+  </script>
+</body>
+</html>
