@@ -35,7 +35,7 @@
     <header>
       <div>
         <h1>CJ Game — Coach Joel House</h1>
-        <div class="small">Mobile-friendly DApp — play, beat levels, claim 21 CJ per level (contract must be funded)</div>
+        <div class="small">Mobile-friendly DApp — play, beat levels, claim 21 CJ per level </div>
       </div>
       <div class="row">
         <div class="small">Token: <strong>$CJ</strong></div>
@@ -146,7 +146,7 @@ async function connectWallet(){
       await loadBalance();
       await readContractInfo();
     } else {
-      alert('No Web3 wallet detected. Open this DApp inside ITLX Wallet.');
+      alert('No Web3 wallet detected. Open this DApp inside Wallet.');
     }
   }catch(e){ console.error('connectWallet',e); alert('Wallet connect failed: '+(e.message||e)); }
 }
