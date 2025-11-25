@@ -1,309 +1,262 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>CJ Token — Level Claim Game (Live)</title>
-  <style>
-    :root{--bg:#070707;--card:#0f1720;--accent:#1e90ff;--accent2:#00c48c;--muted:#9aa4b2}
-    html,body{height:100%;margin:0;background:linear-gradient(180deg,#041021 0%,var(--bg) 100%);font-family:Inter,system-ui,Arial;color:#e6eef6}
-    .wrap{max-width:980px;margin:18px auto;padding:18px}
-    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-    h1{font-size:20px;margin:0}
-    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 6px 18px rgba(2,6,23,0.6)}
-    #gameArea{display:flex;gap:16px;align-items:flex-start}
-    canvas{background:#07121a;border-radius:8px;border:1px solid rgba(255,255,255,0.03)}
-    .controls{display:flex;flex-direction:column;gap:8px}
-    .btn{background:var(--accent);color:#081226;border:none;padding:10px 12px;border-radius:8px;cursor:pointer}
-    .ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
-    .small{font-size:13px}
-    .row{display:flex;gap:8px;align-items:center}
-    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-    .stat{background:rgba(255,255,255,0.02);padding:10px;border-radius:8px;text-align:left}
-    .leader{max-height:180px;overflow:auto}
-    .mobile-controls{display:flex;gap:8px;justify-content:center;margin-top:8px}
-    .arrow{width:52px;height:52px;border-radius:8px;background:rgba(255,255,255,0.02);display:flex;align-items:center;justify-content:center;font-weight:700}
-    .footer{font-size:12px;color:var(--muted);margin-top:8px;text-align:center}
-    .danger{color:#ff7b7b}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>CJ Game DApp — Coach Joel House</title>
+<style>
+  :root{--bg:#071324;--card:#0f1b26;--accent:#00c48c;--muted:#9aa4b2}
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,#02101a 0%,#071324 100%);color:#e6eef6;-webkit-tap-highlight-color:transparent}
+  .wrap{max-width:960px;margin:8px auto;padding:12px}
+  header{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  h1{margin:0;font-size:18px}
+  .card{background:rgba(255,255,255,0.02);padding:12px;border-radius:12px;margin-top:12px}
+  .row{display:flex;gap:8px;align-items:center}
+  button{background:var(--accent);color:#04121a;padding:10px 12px;border-radius:10px;border:0;font-weight:700}
+  canvas{background:#081a22;border-radius:8px;display:block;width:100%;height:auto}
+  .small{color:var(--muted);font-size:13px}
+  .status{margin-top:8px}
+  .grid{display:grid;grid-template-columns:1fr;gap:12px}
+  .controls{display:flex;justify-content:center;gap:8px;margin-top:8px}
+  .touch-btn{background:rgba(255,255,255,0.03);color:#e6eef6;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);font-weight:700}
+  .screenshot{width:100%;border-radius:8px;margin-top:8px}
+  footer{margin-top:12px;color:var(--muted);font-size:13px}
+  .flex-between{display:flex;justify-content:space-between;align-items:center}
+  .muted{color:var(--muted)}
+  @media(min-width:720px){ .grid{grid-template-columns:1fr 320px} }
+</style>
 </head>
 <body>
   <div class="wrap">
     <header>
-      <h1>CJ Token — Level Claim Game (Live)</h1>
+      <div>
+        <h1>CJ Game — Coach Joel House</h1>
+        <div class="small">Mobile-friendly DApp — play, beat levels, claim 21 CJ per level.</div>
+      </div>
       <div class="row">
-        <button id="btnConnect" class="btn small">Connect Wallet</button>
-        <button id="btnClaimOnChain" class="btn small ghost">Claim On-Chain</button>
+        <div class="small">Token: <strong>$CJ</strong></div>
       </div>
     </header>
 
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <div style="font-size:13px;color:var(--muted)">Token</div>
-          <div><strong>Coach Joel House (CJ)</strong></div>
-          <div class="small" style="color:var(--muted);margin-top:6px">Contract: <code id="tokenAddr">0x9ecefef5d5b5b0acf2467393e7b5a6c7c501c6f6</code></div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:13px;color:var(--muted)">Max Supply</div>
-          <div>21,000,000 CJ</div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:13px;color:var(--muted)">Holders</div>
-          <div id="holders">42</div>
-        </div>
-      </div>
+    <div class="card grid">
+      <main>
+        <section>
+          <div class="flex-between">
+            <div class="row">
+              <button id="connectBtn">Connect Wallet</button>
+              <div style="margin-left:8px">
+                <div id="account" class="small">Not connected</div>
+                <div id="cjBalance" class="small">$CJ Balance: -</div>
+              </div>
+            </div>
+            <div class="small">Reward: <strong>21 CJ/level</strong></div>
+          </div>
 
-      <div style="display:flex;gap:12px;margin-top:12px;align-items:center">
-        <div class="stat">
-          <div class="small" style="color:var(--muted)">Market Price</div>
-          <div id="marketPrice">$0.00</div>
-          <div class="small" style="color:var(--muted)">0.000000 BNB</div>
+          <canvas id="gameCanvas" width="800" height="360"></canvas>
+
+          <div class="status small">Level: <span id="level">1</span> — Score: <span id="score">0</span> — Lives: <span id="lives">3</span></div>
+
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+            <button id="startBtn">Start Game</button>
+            <button id="claimBtn" disabled>Claim Reward (0 CJ)</button>
+            <button id="claimAllBtn" disabled>Claim All (multi-tx)</button>
+            <button id="pauseBtn">Pause</button>
+          </div>
+
+          <div class="controls" aria-hidden="false">
+            <button class="touch-btn" id="leftBtn">◀</button>
+            <button class="touch-btn" id="jumpBtn">▲</button>
+            <button class="touch-btn" id="rightBtn">▶</button>
+          </div>
+
+          <img src="/mnt/data/2f0dee77-3407-4a0a-90af-b0394d226cfc.png" class="screenshot" alt="screenshot" />
+
+          <h3 style="margin-top:12px">How it works (transfer rewards)</h3>
+          <ol class="small">
+            <li>Connect wallet ITLX Wallet.</li>
+            <li>Complete a level — each level gives <strong>21 CJ</strong> pending in the UI.</li>
+            <li>Press <strong>Claim Reward</strong> to call the reward contract's <code>claim()</code>. Each call withdraws one 21 CJ reward from the contract.</li>
+            <li>If you have multiple pending levels, use <strong>Claim All</strong> (will prompt a ITLX Wallet confirmation per claim).</li>
+          </ol>
+
+          <div class="small">Note: Gas is paid in BNB per claim transaction. Make sure the reward contract is pre-funded with enough $CJ.</div>
+
+        </section>
+      </main>
+
+      <aside style="display:none;"> <!-- sidebar hidden on mobile default -->
+        <div class="card">
+          <h4>Contract Info</h4>
+          <div class="small">CJ Contract: <a class="muted" href="https://bscscan.com/token/0x9ECEfef5d5B5b0aCF2467393e7b5A6c7c501c6F6" target="_blank">0x9ECE...c6F6</a></div>
+          <div class="small" style="margin-top:6px">Claim Contract: <code id="claimAddr">0x2fAac87db2C3389674F8bF72E557e1C22134De49</code></div>
+          <div style="margin-top:8px"><a class="muted" href="/mnt/data/CJ_Token_Private_Whitepaper.pdf" target="_blank">Download whitepaper (private)</a></div>
         </div>
-        <div class="stat">
-          <div class="small" style="color:var(--muted)">Onchain Market Cap</div>
-          <div id="marketCap">-</div>
-        </div>
-        <div class="stat">
-          <div class="small" style="color:var(--muted)">Transfers (24H)</div>
-          <div id="transfers">137</div>
-        </div>
-      </div>
+      </aside>
     </div>
 
-    <div id="gameArea">
-      <canvas id="gameCanvas" width="360" height="540" class="card"></canvas>
-
-      <div style="flex:1">
-        <div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div>
-              <div style="font-size:13px;color:var(--muted)">Level</div>
-              <div id="levelDisplay" style="font-size:20px">1</div>
-            </div>
-            <div>
-              <div style="font-size:13px;color:var(--muted)">Session Reward</div>
-              <div id="sessionReward" style="font-size:20px">5 CJ</div>
-            </div>
-            <div>
-              <div style="font-size:13px;color:var(--muted)">Time Left</div>
-              <div id="timeLeft" class="danger">--</div>
-            </div>
-          </div>
-
-          <div style="margin-top:12px">
-            <button id="startBtn" class="btn">Start / Resume</button>
-            <button id="pauseBtn" class="btn ghost">Pause</button>
-            <button id="resetBtn" class="btn ghost">Reset Session</button>
-          </div>
-
-          <div style="margin-top:12px" class="small">Mobile Controls</div>
-          <div class="mobile-controls">
-            <div id="leftBtn" class="arrow">◀</div>
-            <div id="upBtn" class="arrow">▲</div>
-            <div id="downBtn" class="arrow">▼</div>
-            <div id="rightBtn" class="arrow">▶</div>
-          </div>
-        </div>
-
-        <div class="card" style="margin-top:12px">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div>
-              <div style="font-size:13px;color:var(--muted)">Leaderboard</div>
-            </div>
-            <div class="small">Local only (can be extended to backend)</div>
-          </div>
-          <div class="leader" id="leaderboard"></div>
-        </div>
-
-        <div class="card" style="margin-top:12px">
-         
-
-    <div class="footer">Live-ready: token address and ABI embedded. Make sure you test on BSC testnet and deploy a claim contract (recommended) before enabling on-chain claims.</div>
+    <footer>
+      <div class="small">This file is ready to host on GitHub Pages. For best mobile experience open it in the ITLX DApp browser or any web3-enabled mobile wallet.</div>
+    </footer>
   </div>
 
-  <!-- Libraries: ethers + web3modal (CDNs) -->
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.7.8/dist/umd/index.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/web3modal@1.9.12/dist/index.js"></script>
+<script>
+// ==================== CONFIG ====================
+const CJ_TOKEN_ADDRESS = '0x9ECEfef5d5B5b0aCF2467393e7b5A6c7c501c6F6';
+const CLAIM_CONTRACT_ADDRESS = '0x2fAac87db2C3389674F8bF72E557e1C22134De49';
+const ERC20_ABI = [
+  {"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"type":"function"},
+  {"constant":true,"inputs":[],"name":"decimals","outputs":[{"name":"","type":"uint8"}],"type":"function"}
+];
+const CLAIM_CONTRACT_ABI = [ { "inputs": [], "name": "claim", "outputs": [], "stateMutability": "nonpayable", "type": "function" } ];
+// =================================================
 
-  <script>
-    /************** CONFIG - EDIT BEFORE DEPLOY **************/
-    const TOKEN_DECIMALS = 18;
-    const CJ_TOKEN_ADDRESS = '0x9ecefef5d5b5b0acf2467393e7b5a6c7c501c6f6';
-    // Token ABI (trimmed to relevant methods from your contract ABI)
-    const CJ_TOKEN_ABI = [
-      {"inputs":[],"stateMutability":"nonpayable","type":"constructor"},
-      {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},
-      {"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-      {"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},
-      {"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},
-      {"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},
-      {"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-      {"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"mint","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
-      {"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"}
-    ];
+let provider, signer, account;
+async function connectWallet(){
+  if(window.ethereum){
+    provider = new ethers.providers.Web3Provider(window.ethereum);
+    await provider.send('eth_requestAccounts',[]);
+    signer = provider.getSigner();
+    account = await signer.getAddress();
+    document.getElementById('account').innerText = account;
+    loadBalance();
+  } else {
+    alert('No Web3 wallet detected. Use ITLX wallet or MetaMask.');
+  }
+}
+async function loadBalance(){
+  try{
+    const token = new ethers.Contract(CJ_TOKEN_ADDRESS, ERC20_ABI, provider);
+    const decimals = await token.decimals();
+    const raw = await token.balanceOf(account);
+    const balance = Number(ethers.utils.formatUnits(raw, decimals));
+    document.getElementById('cjBalance').innerText = 'CJ Balance: ' + balance;
+  }catch(e){ console.error(e); }
+}
 
-    const CLAIM_CONTRACT_ADDRESS = 'PUT_CLAIM_CONTRACT_ADDRESS_HERE';
-    const CLAIM_CONTRACT_ABI = []; // Replace if you deploy a claim contract
-    /*********************************************************/
+// Claim helpers
+async function claimSingle(){
+  if(!signer) return alert('Connect wallet first');
+  const contract = new ethers.Contract(CLAIM_CONTRACT_ADDRESS, CLAIM_CONTRACT_ABI, signer);
+  try{
+    const tx = await contract.claim();
+    await tx.wait();
+    alert('Claim successful — check your wallet');
+    await loadBalance();
+    // reduce pending by one reward
+    pendingReward = Math.max(0, pendingReward - 21);
+    updateClaimButtons();
+  }catch(e){ console.error(e); alert('Claim failed: ' + (e.reason||e.message||e)); }
+}
 
-    // --- HARDER GAME SETTINGS ---
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    let width = canvas.width, height = canvas.height;
-
-    const player = { x: width/2 - 16, y: height-64, w:28, h:28, speed:4 };
-    const goal = { x: Math.random()*(width-60)+30, y:40, w:36, h:36, vx:1.2 };
-    let obstacles = []; // moving obstacles
-    let level = 1;
-    let sessionCJ = 0;
-    let playing = false;
-
-    // Difficulty progression: each level increases goal speed, reduces goal size, adds obstacles
-    function difficultyForLevel(l){
-      return { goalSpeed: 1 + l*0.15, goalSize: Math.max(18, 36 - l*2), obstacleCount: Math.min(6, Math.floor(l/2)), timeLimit: Math.max(6, 18 - l) };
+async function claimAll(){
+  if(!signer) return alert('Connect wallet first');
+  const times = Math.floor(pendingReward / 21);
+  if(times <= 0) return alert('No pending rewards');
+  const contract = new ethers.Contract(CLAIM_CONTRACT_ADDRESS, CLAIM_CONTRACT_ABI, signer);
+  try{
+    for(let i=0;i<times;i++){
+      const tx = await contract.claim();
+      await tx.wait();
+      // update UI between txs
+      pendingReward = Math.max(0, pendingReward - 21);
+      updateClaimButtons();
+      await new Promise(r=>setTimeout(r,500));
     }
+    alert('All claims completed');
+    loadBalance();
+  }catch(e){ console.error(e); alert('Claim failed during batch: ' + (e.reason||e.message||e)); }
+}
 
-    // particles
-    let particles = [];
-    function spawnParticles(x,y,color){
-      for(let i=0;i<10;i++){particles.push({x,y,vx:(Math.random()-0.5)*4,vy:(Math.random()-1.5)*3,life:40+Math.random()*20,color})}
-    }
+document.getElementById('connectBtn').addEventListener('click', connectWallet);
+document.getElementById('claimBtn').addEventListener('click', claimSingle);
+document.getElementById('claimAllBtn').addEventListener('click', claimAll);
 
-    function drawRoundedRect(x,y,w,h,r,fillStyle){ctx.fillStyle=fillStyle;ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();ctx.fill();}
+// ==================== Simple Mobile Game Engine ====================
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+function resizeCanvas(){ const ratio = Math.min(window.devicePixelRatio || 1, 2); const w = Math.min(window.innerWidth - 24, 900); canvas.width = w; canvas.height = Math.floor(w * 0.45); }
+window.addEventListener('resize', resizeCanvas); resizeCanvas();
 
-    function spawnObstacles(count){obstacles=[];for(let i=0;i<count;i++){obstacles.push({x:Math.random()*(width-60)+30,y:Math.random()*(height-200)+80,w:28,h:12,vx:(Math.random()>0.5?1:-1)*(1+Math.random()*1.8)})}}
+let running=false; let level=1; let score=0; let lives=3; let pendingReward=0;
+const player = {x:60,y:0,w:28,h:28,vy:0}; player.ground = () => canvas.height - 40;
+let obstacles=[]; let enemies=[]; let goalX = () => canvas.width - 40;
 
-    function drawScene(){
-      ctx.clearRect(0,0,width,height);
-      const g = ctx.createLinearGradient(0,0,0,height); g.addColorStop(0,'#041826'); g.addColorStop(1,'#07121a'); ctx.fillStyle=g; ctx.fillRect(0,0,width,height);
+function resetLevel(){ obstacles=[]; enemies=[]; player.x=60; player.y=player.ground(); player.vy=0; }
+function spawnObstacles(){
+  for(let i=0;i<level+2;i++){ const ox=canvas.width*0.5 + i*(80 + Math.random()*60); obstacles.push({x:ox,y:player.ground(),w:30,h:30}); }
+  for(let i=0;i<Math.min(5,level);i++){ const ex=canvas.width*0.55 + i*(120 + Math.random()*80); enemies.push({x:ex,y:player.ground()-10,w:24,h:24}); }
+}
 
-      // moving goal
-      drawRoundedRect(goal.x,goal.y,goal.w,goal.h,8,'#00c48c'); ctx.fillStyle='#012'; ctx.font='12px Inter'; ctx.fillText('GOAL', goal.x+6, goal.y+goal.h/2+4);
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  // background
+  ctx.fillStyle='#081a22'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  // ground
+  ctx.fillStyle='#052025'; ctx.fillRect(0,canvas.height-40,canvas.width,40);
+  // player
+  ctx.fillStyle='#00c48c'; ctx.fillRect(player.x,player.y-player.h,player.w,player.h);
+  ctx.fillStyle='#fff'; ctx.fillText('🏃',player.x+4,player.y-player.h/2+6);
+  // obstacles
+  ctx.fillStyle='#d95555'; obstacles.forEach(o=>{ ctx.fillRect(o.x,o.y-o.h,o.w,o.h); ctx.fillText('🧱',o.x+6,o.y-o.h/2+6); });
+  // enemies
+  ctx.fillStyle='#ffb86b'; enemies.forEach(e=>{ ctx.fillRect(e.x,e.y-e.h,e.w,e.h); ctx.fillText('🤖',e.x+4,e.y-e.h/2+6); });
+  // goal
+  ctx.fillStyle='#fff'; ctx.fillText('🏁',goalX(),player.ground()-20);
+}
 
-      // player glow
-      ctx.shadowColor='rgba(30,144,255,0.45)'; ctx.shadowBlur=12; drawRoundedRect(player.x,player.y,player.w,player.h,6,'#1e90ff'); ctx.shadowBlur=0;
+function updatePhysics(dt){
+  player.vy += 0.9; player.y += player.vy; if(player.y>player.ground()) {player.y=player.ground(); player.vy=0}
+  obstacles.forEach(o=>o.x -= 2 + level*0.2);
+  enemies.forEach(e=>e.x -= 2 + level*0.25);
+}
 
-      // obstacles
-      ctx.fillStyle='rgba(255,120,120,0.12)'; obstacles.forEach(o=>{ctx.fillRect(o.x,o.y,o.w,o.h)});
+function checkCollisions(){
+  for(let o of obstacles){ if(player.x+player.w > o.x && player.x < o.x+o.w && player.y-player.h < o.y && player.y > o.y-o.h){
+      lives--; document.getElementById('lives').innerText=lives; resetLevel(); if(lives<=0){ running=false; alert('Game over'); }
+      return;
+    }}
+  for(let i=enemies.length-1;i>=0;i--){ const e=enemies[i]; if(player.x+player.w > e.x && player.x < e.x+e.w && player.y-player.h < e.y && player.y > e.y-e.h){
+      enemies.splice(i,1); score += 10; document.getElementById('score').innerText = score;
+    }}
+  if(player.x > goalX()-10){
+    level++; document.getElementById('level').innerText = level;
+    // reward 21 CJ per completed level
+    pendingReward += 21;
+    updateClaimButtons();
+    resetLevel(); spawnObstacles();
+  }
+}
 
-      // particles
-      for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.x+=p.vx;p.y+=p.vy;p.vy+=0.06;p.life--;ctx.globalAlpha=Math.max(0,p.life/60);ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,3,3);if(p.life<=0)particles.splice(i,1)}
-    }
+let lastTime=0; function loop(ts){ if(!running) return; const dt = ts-lastTime; lastTime=ts; updatePhysics(dt); draw(); checkCollisions(); requestAnimationFrame(loop); }
 
-    function collision(a,b){return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y}
+// Controls
+window.addEventListener('keydown', e=>{ if(e.code==='ArrowUp'||e.code==='Space'){ if(player.y==player.ground()) player.vy = -12; } if(e.code==='ArrowRight'){ player.x += 8; } if(e.code==='ArrowLeft'){ player.x -= 8; } });
 
-    // level timer
-    let levelTimer=0; let levelTimeLeft=0;
-    function startLevel(){
-      const dif = difficultyForLevel(level);
-      goal.w = dif.goalSize; goal.h = dif.goalSize; goal.vx = (Math.random()>0.5?1:-1)*dif.goalSpeed; sessionCJ = sessionCJ; // keep session
-      spawnObstacles(dif.obstacleCount); levelTimeLeft = dif.timeLimit; document.getElementById('timeLeft').innerText = levelTimeLeft + 's';
-      // make player a bit faster as level increases (but cap)
-      player.speed = Math.min(7, 4 + level*0.12);
-    }
+// Touch buttons
+document.getElementById('leftBtn').addEventListener('touchstart', ()=>{ player.x -= 8; });
+document.getElementById('rightBtn').addEventListener('touchstart', ()=>{ player.x += 8; });
+document.getElementById('jumpBtn').addEventListener('touchstart', ()=>{ if(player.y==player.ground()) player.vy = -12; });
 
-    function levelUp(){
-      spawnParticles(goal.x+goal.w/2,goal.y+goal.h/2,'#00c48c');
-      const reward = Math.max(1, Math.floor(level*4));
-      sessionCJ += reward;
-      document.getElementById('cjEarned').innerText = sessionCJ + ' CJ';
-      level++;
-      document.getElementById('levelDisplay').innerText = level;
-      document.getElementById('sessionReward').innerText = (Math.max(1, Math.floor(level*4))) + ' CJ';
-      // reset positions
-      player.x = width/2 - player.w/2; player.y = height-64;
-      goal.x = Math.random()*(width-80)+40; goal.y = 30;
-      startLevel();
-      saveToLeaderboard(sessionCJ);
-    }
+// Start/pause
+document.getElementById('startBtn').addEventListener('click', ()=>{ if(!running){ running=true; level=1; score=0; lives=3; pendingReward=0; document.getElementById('level').innerText=level; document.getElementById('score').innerText=score; document.getElementById('lives').innerText=lives; resetLevel(); spawnObstacles(); lastTime = performance.now(); requestAnimationFrame(loop); }});
+document.getElementById('pauseBtn').addEventListener('click', ()=>{ running = !running; if(running){ lastTime = performance.now(); requestAnimationFrame(loop); } });
 
-    function updatePhysics(){
-      // move goal horizontally and bounce
-      goal.x += goal.vx; if(goal.x < 12 || goal.x+goal.w > width-12) goal.vx *= -1;
-      // move obstacles
-      obstacles.forEach(o=>{o.x += o.vx; if(o.x<12||o.x+o.w>width-12) o.vx *= -1});
-    }
+function updateClaimButtons(){
+  document.getElementById('claimBtn').innerText = 'Claim Reward ('+ pendingReward + ' CJ)';
+  document.getElementById('claimBtn').disabled = pendingReward < 21;
+  document.getElementById('claimAllBtn').innerText = 'Claim All ('+ Math.floor(pendingReward/21) +')';
+  document.getElementById('claimAllBtn').disabled = Math.floor(pendingReward/21) <= 0;
+}
 
-    function gameLoop(){
-      if(!playing) return;
-      // movement input
-      if(keys.ArrowLeft) player.x -= player.speed; if(keys.ArrowRight) player.x += player.speed; if(keys.ArrowUp) player.y -= player.speed; if(keys.ArrowDown) player.y += player.speed;
-      // bounds
-      player.x = Math.max(8, Math.min(width-player.w-8, player.x)); player.y = Math.max(8, Math.min(height-player.h-8, player.y));
-      updatePhysics();
-      // collision with obstacles -> penalize: restart level and reduce reward
-      for(const o of obstacles){ if(collision(player,o)){ spawnParticles(player.x+player.w/2,player.y+player.h/2,'#ff7b7b'); // penalty
-          sessionCJ = Math.max(0, sessionCJ - Math.floor(level*2)); document.getElementById('cjEarned').innerText = sessionCJ + ' CJ';
-          // reset player
-          player.x = width/2 - player.w/2; player.y = height-64; break; }}
-      // check win
-      if(collision(player,goal)) { levelUp(); }
-      drawScene();
-      requestAnimationFrame(gameLoop);
-    }
+// Claim handlers already attached above
 
-    // Input handling
-    const keys = {};
-    window.addEventListener('keydown',e=>keys[e.key]=true);
-    window.addEventListener('keyup',e=>keys[e.key]=false);
+// Load ethers
+(function loadEthers(){
+  const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/ethers/dist/ethers.min.js'; s.onload = ()=>{ console.log('ethers loaded'); };
+  document.head.appendChild(s);
+})();
 
-    // Mobile buttons
-    document.getElementById('leftBtn').addEventListener('touchstart',()=>keys.ArrowLeft=true); document.getElementById('leftBtn').addEventListener('touchend',()=>keys.ArrowLeft=false);
-    document.getElementById('rightBtn').addEventListener('touchstart',()=>keys.ArrowRight=true); document.getElementById('rightBtn').addEventListener('touchend',()=>keys.ArrowRight=false);
-    document.getElementById('upBtn').addEventListener('touchstart',()=>keys.ArrowUp=true); document.getElementById('upBtn').addEventListener('touchend',()=>keys.ArrowUp=false);
-    document.getElementById('downBtn').addEventListener('touchstart',()=>keys.ArrowDown=true); document.getElementById('downBtn').addEventListener('touchend',()=>keys.ArrowDown=false);
-
-    document.getElementById('startBtn').addEventListener('click', ()=>{ if(!playing){ playing=true; startLevel(); updateTimer(); gameLoop(); } audioBgm.play().catch(()=>{});});
-    document.getElementById('pauseBtn').addEventListener('click', ()=>{playing=false; audioBgm.pause();});
-    document.getElementById('resetBtn').addEventListener('click', ()=>{playing=false; level=1; sessionCJ=0; document.getElementById('cjEarned').innerText='0'; document.getElementById('levelDisplay').innerText='1'; startLevel(); renderLeaderboard();});
-
-    // timer loop
-    function updateTimer(){ if(!playing) return; levelTimeLeft -= 1; document.getElementById('timeLeft').innerText = levelTimeLeft + 's'; if(levelTimeLeft<=0){ // time out = level fail with penalty
-        sessionCJ = Math.max(0, sessionCJ - Math.floor(level*3)); document.getElementById('cjEarned').innerText = sessionCJ + ' CJ'; player.x = width/2 - player.w/2; player.y = height-64; startLevel(); }
-      setTimeout(()=>{ if(playing) updateTimer(); },1000); }
-
-    // Leaderboard using localStorage
-    function saveToLeaderboard(score){ const lb = JSON.parse(localStorage.getItem('cj_lb')||'[]'); lb.push({when:Date.now(),score}); lb.sort((a,b)=>b.score-a.score); if(lb.length>50) lb.length=50; localStorage.setItem('cj_lb',JSON.stringify(lb)); renderLeaderboard(); }
-    function renderLeaderboard(){ const el = document.getElementById('leaderboard'); el.innerHTML=''; const lb = JSON.parse(localStorage.getItem('cj_lb')||'[]'); if(lb.length===0){el.innerHTML='<div class="small" style="color:var(--muted)">No entries yet</div>';return} lb.forEach((r,i)=>{const d=new Date(r.when); const row=document.createElement('div'); row.style.padding='8px 6px'; row.style.borderBottom='1px solid rgba(255,255,255,0.02)'; row.innerHTML=`<strong>#${i+1}</strong> ${r.score} CJ <div class="small" style="color:var(--muted)">${d.toLocaleString()}</div>`; el.appendChild(row)}); }
-    renderLeaderboard();
-
-    // Sounds (placeholders)
-    const audioBgm = new Audio(''); const audioPop = new Audio('');
-
-    // Wallet integration (Web3Modal + WalletConnect + MetaMask).
-    let provider, web3Provider, signer, userAddress;
-    const providerOptions = { walletconnect: { package: window.WalletConnectProvider, options: { infuraId: '' } } };
-    const web3Modal = new window.Web3Modal.default({ cacheProvider: false, providerOptions });
-
-    document.getElementById('btnConnect').addEventListener('click', async ()=>{
-      try{
-        provider = await web3Modal.connect(); web3Provider = new ethers.providers.Web3Provider(provider); signer = web3Provider.getSigner(); userAddress = await signer.getAddress(); document.getElementById('walletStatus').innerText = userAddress; document.getElementById('btnConnect').innerText = 'Connected';
-      }catch(err){console.error(err); alert('Wallet connect failed')}
-    });
-
-    // On-chain claim flow template: TOKEN transfer/ mint requires owner privileges. Recommended: deploy a small claim contract (owner funded) that exposes claim(uint256) and use it here.
-    async function claimOnChain(){
-      if(!signer){alert('Please connect wallet first');return}
-      if(CLAIM_CONTRACT_ADDRESS==='PUT_CLAIM_CONTRACT_ADDRESS_HERE'){alert('CLAIM_CONTRACT_ADDRESS not set. Deploy a claim contract before enabling on-chain claims.');return}
-      const reward = sessionCJ; if(reward<=0){alert('No CJ to claim');return}
-      try{
-        const contract = new ethers.Contract(CLAIM_CONTRACT_ADDRESS, CLAIM_CONTRACT_ABI, signer);
-        const tx = await contract.claim(reward.toString());
-        alert('Transaction sent: ' + tx.hash); await tx.wait(); alert('Claim successful on-chain'); sessionCJ = 0; document.getElementById('cjEarned').innerText = '0';
-      }catch(e){console.error(e); alert('Claim failed: '+ (e && e.message ? e.message : e))}
-    }
-    document.getElementById('btnClaimOnChain').addEventListener('click', claimOnChain);
-
-    // Resize handling
-    window.addEventListener('resize', ()=>{width=canvas.width=360;height=canvas.height=540});
-
-    // Expose debug
-    window._GAME = { levelUp, saveToLeaderboard };
-
-    // Initialize
-    player.x = width/2 - player.w/2; player.y = height-64; startLevel();
-  </script>
+</script>
 </body>
 </html>
