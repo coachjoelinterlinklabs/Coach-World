@@ -4,15 +4,12 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <title>CJ Game DApp — Coach Joel House</title>
-
-<!-- Load ethers correctly BEFORE game code -->
-<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-
+<link rel="icon" href="data:;base64,iVBORw0KGgo=" />
 <style>
   :root{--bg:#071324;--card:#0f1b26;--accent:#00c48c;--muted:#9aa4b2}
   *{box-sizing:border-box}
   html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,#02101a 0%,#071324 100%);color:#e6eef6;-webkit-tap-highlight-color:transparent}
-  .wrap{max-width:960px;margin:8px auto;padding:12px}
+  .wrap{max-width:980px;margin:8px auto;padding:12px}
   header{display:flex;justify-content:space-between;align-items:center;gap:8px}
   h1{margin:0;font-size:18px}
   .card{background:rgba(255,255,255,0.02);padding:12px;border-radius:12px;margin-top:12px}
@@ -28,16 +25,20 @@
   footer{margin-top:12px;color:var(--muted);font-size:13px}
   .flex-between{display:flex;justify-content:space-between;align-items:center}
   .muted{color:var(--muted)}
+  .info-line{margin-top:8px}
+  .small-btn{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted);padding:6px 8px;border-radius:8px}
   @media(min-width:720px){ .grid{grid-template-columns:1fr 320px} }
 </style>
 </head>
-
 <body>
   <div class="wrap">
     <header>
       <div>
         <h1>CJ Game — Coach Joel House</h1>
-        <div class="small">Mobile-friendly DApp — play, beat levels, claim 21 CJ per level.</div>
+        <div class="small">Mobile-friendly DApp — play, beat levels, claim 21 CJ per level (contract must be funded)</div>
+      </div>
+      <div class="row">
+        <div class="small">Token: <strong>$CJ</strong></div>
       </div>
     </header>
 
@@ -49,10 +50,10 @@
               <button id="connectBtn">Connect Wallet</button>
               <div style="margin-left:8px">
                 <div id="account" class="small">Not connected</div>
-                <div id="cjBalance" class="small">$CJ Balance: -</div>
+                <div id="cjBalance" class="small">Your CJ balance: -</div>
               </div>
             </div>
-            <div class="small">Reward: <strong>21 CJ/level</strong></div>
+            <div class="small">Reward: <strong id="rewardLabel">21 CJ/level</strong></div>
           </div>
 
           <canvas id="gameCanvas" width="800" height="360"></canvas>
@@ -62,224 +63,236 @@
           <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
             <button id="startBtn">Start Game</button>
             <button id="claimBtn" disabled>Claim Reward (0 CJ)</button>
-            <button id="claimAllBtn" disabled>Claim All (multi-tx)</button>
+            <button id="claimAllBtn" disabled>Claim All (0)</button>
             <button id="pauseBtn">Pause</button>
           </div>
 
-          <div class="controls">
+          <div class="controls" aria-hidden="false">
             <button class="touch-btn" id="leftBtn">◀</button>
             <button class="touch-btn" id="jumpBtn">▲</button>
             <button class="touch-btn" id="rightBtn">▶</button>
           </div>
 
-          <h3 style="margin-top:12px">Transfer Rewards System</h3>
+          <img src="/mnt/data/2f0dee77-3407-4a0a-90af-b0394d226cfc.png" class="screenshot" alt="screenshot" />
+
+          <h3 style="margin-top:12px">How it works (transfer rewards)</h3>
           <ol class="small">
-            <li>Connect with ITLX Wallet or MetaMask.</li>
-            <li>Each completed level gives **21 CJ pending**.</li>
-            <li>Claim Reward → calls your reward contract <code>claim()</code>.</li>
-            <li>Claim All → multiple claim calls (separate gas).</li>
+            <li>Connect wallet (ITLX Wallet).</li>
+            <li>Complete a level — each level gives <strong>21 CJ</strong> pending in the UI.</li>
+            <li>Press <strong>Claim Reward</strong> to call the reward contract's <code>claim()</code>. Each call withdraws one 21 CJ reward from the contract.</li>
+            <li>If you have multiple pending levels, use <strong>Claim All</strong> (the DApp will wait for the next block between claims to respect contract limits).</li>
           </ol>
+
+          <div id="contractInfo" class="small info-line">Contract info loading...</div>
+          <div id="txInfo" class="small info-line"></div>
+
+          <div class="small">Note: Gas is paid in BNB per claim transaction. Make sure the reward contract is pre-funded with enough $CJ (you funded it already).</div>
+
         </section>
       </main>
+
+      <aside class="card" style="min-width:240px;max-width:320px">
+        <h4 style="margin:0 0 8px 0">Contract</h4>
+        <div class="small">CJ Token: <a class="muted" href="https://bscscan.com/token/0x9ECEfef5d5B5b0aCF2467393e7b5A6c7c501c6F6" target="_blank">0x9ECE...c6F6</a></div>
+        <div class="small" style="margin-top:6px">Reward Contract: <a class="muted" href="https://bscscan.com/address/0x2fAac87db2C3389674F8bF72E557e1C22134De49" target="_blank">0x2fAa...4De49</a></div>
+        <div id="rewardContractBalance" class="small info-line">Loading contract balance...</div>
+        <div style="margin-top:8px"><a class="muted" href="/mnt/data/CJ_Token_Private_Whitepaper.pdf" target="_blank">Download whitepaper (private)</a></div>
+      </aside>
     </div>
 
     <footer>
-      <div class="small">Optimized for ITLX Wallet DApp browser.</div>
+      <div class="small">This file is ready to host on GitHub Pages or open in the ITLX DApp browser. Make sure your wallet has some BNB for gas.</div>
     </footer>
   </div>
 
+<!-- Ethers v5 UMD -->
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 <script>
-// ============ CONFIG ============
-const CJ_TOKEN_ADDRESS = "0x9ECEfef5d5B5b0aCF2467393e7b5A6c7c501c6F6";
-const CLAIM_CONTRACT_ADDRESS = "0x2fAac87db2C3389674F8bF72E557e1C22134De49";
-
+// ========== CONFIG ===========
+const CJ_TOKEN_ADDRESS = '0x9ECEfef5d5B5b0aCF2467393e7b5A6c7c501c6F6';
+const CLAIM_CONTRACT_ADDRESS = '0x2fAac87db2C3389674F8bF72E557e1C22134De49';
+// Minimal ERC20 ABI
 const ERC20_ABI = [
-  { "constant":true, "inputs":[{"name":"_owner","type":"address"}], "name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"type":"function"},
-  { "constant":true, "inputs":[], "name":"decimals","outputs":[{"name":"","type":"uint8"}],"type":"function"}
+  {"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"type":"function"},
+  {"constant":true,"inputs":[],"name":"decimals","outputs":[{"name":"","type":"uint8"}],"type":"function"}
 ];
-
+// Reward contract ABI (matches your custom ABI saved in BscScan)
 const CLAIM_CONTRACT_ABI = [
-  { "inputs": [], "name": "claim", "outputs": [], "stateMutability": "nonpayable", "type": "function" }
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"RewardClaimed","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"RewardAmountUpdated","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnerChanged","type":"event"},
+  {"inputs":[],"name":"claim","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"setRewardAmount","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdrawCJ","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"changeOwner","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[],"name":"cjToken","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
+  {"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
+  {"inputs":[],"name":"rewardAmount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"lastClaimBlock","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}
 ];
+// ==============================
 
-// ============ WALLET CONNECT ============
 let provider, signer, account;
+let pendingReward = 0; // in CJ tokens (integer amount)
 
 async function connectWallet(){
-  try {
-    if (window.ethereum) {
-      provider = new ethers.providers.Web3Provider(window.ethereum, "any");
-      await provider.send("eth_requestAccounts", []);
+  try{
+    if(window.ethereum){
+      provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
+      await provider.send('eth_requestAccounts', []);
       signer = provider.getSigner();
       account = await signer.getAddress();
-      document.getElementById("account").innerText = account;
-      loadBalance();
+      document.getElementById('account').innerText = account;
+      await loadBalance();
+      await readContractInfo();
     } else {
-      alert("No Web3 wallet found. Please open in ITLX Wallet.");
+      alert('No Web3 wallet detected. Open this DApp inside ITLX Wallet.');
     }
-  } catch(e) {
-    console.error(e);
-    alert("Connection failed.");
-  }
+  }catch(e){ console.error('connectWallet',e); alert('Wallet connect failed: '+(e.message||e)); }
 }
 
 async function loadBalance(){
   try{
+    if(!provider || !account) return;
     const token = new ethers.Contract(CJ_TOKEN_ADDRESS, ERC20_ABI, provider);
     const decimals = await token.decimals();
     const raw = await token.balanceOf(account);
-    document.getElementById("cjBalance").innerText = "CJ Balance: " + ethers.utils.formatUnits(raw, decimals);
-  } catch(e){ console.error(e); }
+    const bal = Number(ethers.utils.formatUnits(raw, decimals));
+    document.getElementById('cjBalance').innerText = 'Your CJ balance: ' + bal;
+  }catch(e){ console.error('loadBalance',e); }
 }
 
-document.getElementById("connectBtn").addEventListener("click", connectWallet);
+async function readContractInfo(){
+  try{
+    const token = new ethers.Contract(CJ_TOKEN_ADDRESS, ERC20_ABI, provider);
+    const reward = new ethers.Contract(CLAIM_CONTRACT_ADDRESS, CLAIM_CONTRACT_ABI, provider);
+    const decimals = await token.decimals();
+    const rawBal = await token.balanceOf(CLAIM_CONTRACT_ADDRESS);
+    const rewardBal = Number(ethers.utils.formatUnits(rawBal, decimals));
+    let rawRewardAmount = await reward.rewardAmount();
+    const rewardAmountFormatted = Number(ethers.utils.formatUnits(rawRewardAmount, decimals));
 
-// ============ CLAIM SYSTEM ============
-let pendingReward = 0;
+    document.getElementById('rewardContractBalance').innerText = 'Reward contract balance: ' + rewardBal + ' CJ';
+    document.getElementById('rewardLabel').innerText = (rewardAmountFormatted) + ' CJ/level';
+    // set pendingReward label
+    updateClaimButtons();
 
-function updateClaimButtons(){
-  document.getElementById("claimBtn").innerText = `Claim Reward (${pendingReward} CJ)`;
-  document.getElementById("claimBtn").disabled = pendingReward < 21;
+    // show detailed contract info
+    document.getElementById('contractInfo').innerText = `Reward amount: ${rewardAmountFormatted} CJ — contract balance: ${rewardBal} CJ`;
+  }catch(e){ console.error('readContractInfo',e); document.getElementById('contractInfo').innerText = 'Could not read contract info'; }
+}
 
-  const multi = Math.floor(pendingReward / 21);
-  document.getElementById("claimAllBtn").innerText = `Claim All (${multi})`;
-  document.getElementById("claimAllBtn").disabled = multi <= 0;
+// wait for next block helper
+async function waitForNextBlock(provider){
+  const start = await provider.getBlockNumber();
+  while(true){ await new Promise(r=>setTimeout(r,800)); const now = await provider.getBlockNumber(); if(now>start) return now; }
 }
 
 async function claimSingle(){
-  if(!signer) return alert("Connect wallet first.");
-
+  if(!signer) return alert('Connect wallet first');
   const contract = new ethers.Contract(CLAIM_CONTRACT_ADDRESS, CLAIM_CONTRACT_ABI, signer);
-
   try{
+    document.getElementById('txInfo').innerText = 'Sending claim transaction...';
     const tx = await contract.claim();
+    document.getElementById('txInfo').innerText = 'Waiting for confirmation...';
     await tx.wait();
-    alert("21 CJ claimed!");
-
-    pendingReward -= 21;
-    if (pendingReward < 0) pendingReward = 0;
+    document.getElementById('txInfo').innerText = 'Claim successful.';
+    // deduct pending rewards (21 per claim)
+    pendingReward = Math.max(0, pendingReward - 21);
     updateClaimButtons();
-    loadBalance();
-
-  }catch(e){ alert("Claim failed."); console.error(e); }
+    await loadBalance();
+    await readContractInfo();
+  }catch(e){ console.error('claimSingle',e); alert('Claim failed: '+(e.reason||e.message||e)); document.getElementById('txInfo').innerText = 'Claim failed.'; }
 }
 
 async function claimAll(){
-  if(!signer) return alert("Connect wallet first.");
-
+  if(!signer) return alert('Connect wallet first');
   const times = Math.floor(pendingReward / 21);
-  if(times <= 0) return;
-
+  if(times<=0) return alert('No pending rewards');
   const contract = new ethers.Contract(CLAIM_CONTRACT_ADDRESS, CLAIM_CONTRACT_ABI, signer);
-
+  document.getElementById('txInfo').innerText = `Starting batch of ${times} claims...`;
   for(let i=0;i<times;i++){
-    const tx = await contract.claim();
-    await tx.wait();
-    pendingReward -= 21;
-    updateClaimButtons();
+    try{
+      const tx = await contract.claim();
+      await tx.wait();
+      pendingReward = Math.max(0, pendingReward - 21);
+      updateClaimButtons();
+      document.getElementById('txInfo').innerText = `Completed ${i+1}/${times}`;
+      // wait next block to respect lastClaimBlock protection
+      await waitForNextBlock(provider);
+    }catch(e){ console.error('claimAll error',e); alert('Batch claim stopped: '+(e.reason||e.message||e)); document.getElementById('txInfo').innerText = 'Batch claim stopped.'; break; }
   }
-
-  alert("All rewards claimed!");
-  loadBalance();
+  await loadBalance();
+  await readContractInfo();
+  document.getElementById('txInfo').innerText = 'Batch finished.';
 }
 
-document.getElementById("claimBtn").addEventListener("click", claimSingle);
-document.getElementById("claimAllBtn").addEventListener("click", claimAll);
-
-// ============ SIMPLE GAME ENGINE ============
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
-
-function resizeCanvas(){
-  const w = Math.min(window.innerWidth - 24, 900);
-  canvas.width = w;
-  canvas.height = Math.floor(w * 0.45);
+function updateClaimButtons(){
+  document.getElementById('claimBtn').innerText = 'Claim Reward ('+ pendingReward + ' CJ)';
+  document.getElementById('claimBtn').disabled = pendingReward < 21;
+  document.getElementById('claimAllBtn').innerText = 'Claim All ('+ Math.floor(pendingReward/21) +')';
+  document.getElementById('claimAllBtn').disabled = Math.floor(pendingReward/21) <= 0;
 }
-window.addEventListener("resize", resizeCanvas);
-resizeCanvas();
 
-let running=false, level=1, score=0, lives=3;
-const player={x:60,y:0,w:28,h:28,vy:0};
-player.ground=()=>canvas.height-40;
+// ================= GAME ENGINE =================
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+function resizeCanvas(){ const ratio = Math.min(window.devicePixelRatio || 1, 2); const w = Math.min(window.innerWidth - 24, 900); canvas.width = w; canvas.height = Math.floor(w * 0.45); }
+window.addEventListener('resize', resizeCanvas); resizeCanvas();
 
-let obstacles=[], enemies=[];
-const goalX=()=>canvas.width-40;
+let running=false; let level=1; let score=0; let lives=3;
+const player = {x:60,y:0,w:28,h:28,vy:0}; player.ground = () => canvas.height - 40;
+let obstacles=[]; let enemies=[];
 
 function resetLevel(){ obstacles=[]; enemies=[]; player.x=60; player.y=player.ground(); player.vy=0; }
-
 function spawnObstacles(){
-  for(let i=0;i<level+2;i++){
-    const ox=canvas.width*0.5 + i*(80 + Math.random()*60);
-    obstacles.push({x:ox,y:player.ground(),w:30,h:30});
-  }
+  for(let i=0;i<level+2;i++){ const ox=canvas.width*0.5 + i*(80 + Math.random()*60); obstacles.push({x:ox,y:player.ground(),w:30,h:30}); }
+  for(let i=0;i<Math.min(5,level);i++){ const ex=canvas.width*0.55 + i*(120 + Math.random()*80); enemies.push({x:ex,y:player.ground()-10,w:24,h:24}); }
 }
 
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle="#081a22"; ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle="#052025"; ctx.fillRect(0,canvas.height-40,canvas.width,40);
-
-  ctx.fillStyle="#00c48c"; ctx.fillRect(player.x,player.y-player.h,player.w,player.h);
-
-  ctx.fillStyle="#fff"; ctx.fillText("🏃",player.x+4,player.y-player.h/2+6);
-  ctx.fillStyle="#d95555"; obstacles.forEach(o=>{ ctx.fillRect(o.x,o.y-o.h,o.w,o.h); });
-
-  ctx.fillStyle="#fff"; ctx.fillText("🏁",goalX(),player.ground()-20);
+  ctx.fillStyle='#081a22'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='#052025'; ctx.fillRect(0,canvas.height-40,canvas.width,40);
+  ctx.fillStyle='#00c48c'; ctx.fillRect(player.x,player.y-player.h,player.w,player.h);
+  ctx.fillStyle='#fff'; ctx.fillText('🏃',player.x+4,player.y-player.h/2+6);
+  ctx.fillStyle='#d95555'; obstacles.forEach(o=>{ ctx.fillRect(o.x,o.y-o.h,o.w,o.h); ctx.fillText('🧱',o.x+6,o.y-o.h/2+6); });
+  ctx.fillStyle='#ffb86b'; enemies.forEach(e=>{ ctx.fillRect(e.x,e.y-e.h,e.w,e.h); ctx.fillText('🤖',e.x+4,e.y-e.h/2+6); });
+  ctx.fillStyle='#fff'; ctx.fillText('🏁',canvas.width-40,player.ground()-20);
 }
 
-function updatePhysics(dt){
-  player.vy += 0.9;
-  player.y += player.vy;
-  if(player.y > player.ground()){ player.y = player.ground(); player.vy = 0; }
+function updatePhysics(dt){ player.vy += 0.9; player.y += player.vy; if(player.y>player.ground()) {player.y=player.ground(); player.vy=0} obstacles.forEach(o=>o.x -= 2 + level*0.2); enemies.forEach(e=>e.x -= 2 + level*0.25); }
 
-  obstacles.forEach(o=>o.x -= 2 + level*0.2);
+function checkCollisions(){
+  for(let o of obstacles){ if(player.x+player.w > o.x && player.x < o.x+o.w && player.y-player.h < o.y && player.y > o.y-o.h){ lives--; document.getElementById('lives').innerText=lives; resetLevel(); if(lives<=0){ running=false; alert('Game over'); } return; }}
+  for(let i=enemies.length-1;i>=0;i--){ const e=enemies[i]; if(player.x+player.w > e.x && player.x < e.x+e.w && player.y-player.h < e.y && player.y > e.y-e.h){ enemies.splice(i,1); score += 10; document.getElementById('score').innerText = score; }}
+  if(player.x > canvas.width-50){ level++; document.getElementById('level').innerText = level; // reward 21 CJ per completed level
+    pendingReward += 21; updateClaimButtons(); resetLevel(); spawnObstacles(); }
 }
 
-function check(){
-  for(let o of obstacles){
-    if(player.x+player.w > o.x && player.x < o.x+o.w && player.y-player.h < o.y && player.y > o.y-o.h){
-      lives--; document.getElementById("lives").innerText=lives; resetLevel();
-      if(lives<=0){ running=false; alert("Game Over!"); }
-      return;
-    }
-  }
+let lastTime=0; function loop(ts){ if(!running) return; const dt = ts-lastTime; lastTime=ts; updatePhysics(dt); draw(); checkCollisions(); requestAnimationFrame(loop); }
 
-  if(player.x > goalX()-10){
-    level++; document.getElementById("level").innerText=level;
+// Controls
+window.addEventListener('keydown', e=>{ if(e.code==='ArrowUp'||e.code==='Space'){ if(player.y==player.ground()) player.vy = -12; } if(e.code==='ArrowRight'){ player.x += 8; } if(e.code==='ArrowLeft'){ player.x -= 8; } });
 
-    // reward player 21 CJ
-    pendingReward += 21;
-    updateClaimButtons();
+// Touch buttons
+document.getElementById('leftBtn').addEventListener('touchstart', ()=>{ player.x -= 8; });
+document.getElementById('rightBtn').addEventListener('touchstart', ()=>{ player.x += 8; });
+document.getElementById('jumpBtn').addEventListener('touchstart', ()=>{ if(player.y==player.ground()) player.vy = -12; });
 
-    resetLevel(); spawnObstacles();
-  }
-}
+// Start/pause
+document.getElementById('startBtn').addEventListener('click', ()=>{ if(!running){ running=true; level=1; score=0; lives=3; pendingReward=0; document.getElementById('level').innerText=level; document.getElementById('score').innerText=score; document.getElementById('lives').innerText=lives; resetLevel(); spawnObstacles(); lastTime = performance.now(); requestAnimationFrame(loop); }});
+document.getElementById('pauseBtn').addEventListener('click', ()=>{ running = !running; if(running){ lastTime = performance.now(); requestAnimationFrame(loop); } });
 
-let lastT=0;
-function loop(t){
-  if(!running) return;
-  updatePhysics(t-lastT); draw(); check();
-  lastT=t; requestAnimationFrame(loop);
-}
+// Hook claim buttons
+document.getElementById('claimBtn').addEventListener('click', claimSingle);
+document.getElementById('claimAllBtn').addEventListener('click', claimAll);
+document.getElementById('connectBtn').addEventListener('click', connectWallet);
 
-document.getElementById("startBtn").addEventListener("click", ()=>{
-  if(!running){ running=true; level=1; score=0; lives=3; pendingReward=0;
-    document.getElementById("lives").innerText=lives;
-    updateClaimButtons();
-    resetLevel(); spawnObstacles();
-    lastT=performance.now(); requestAnimationFrame(loop);
-  }
+// Auto-load for non-wallet preview: show rewardAmount from contract when provider available
+window.addEventListener('load', ()=>{
+  console.log('App loaded');
 });
-
-document.getElementById("pauseBtn").addEventListener("click", ()=>{
-  running = !running;
-  if(running){ lastT = performance.now(); requestAnimationFrame(loop); }
-});
-
-document.getElementById("leftBtn").addEventListener("touchstart", ()=>{ player.x -= 10; });
-document.getElementById("rightBtn").addEventListener("touchstart", ()=>{ player.x += 10; });
-document.getElementById("jumpBtn").addEventListener("touchstart", ()=>{ if(player.y==player.ground()) player.vy = -14; });
-
 </script>
 </body>
 </html>
